@@ -9,3 +9,19 @@ $('#manual').onclick=()=>{manual=!manual;$('#throttleWrap').classList.toggle('hi
 $('#throttle').oninput=e=>{if(!audioOn)initAudio();let v=+e.target.value;$('#throttleVal').textContent=v+'%';render(v*1.15,v/15)};
 $('#volume').oninput=e=>{$('#volumeVal').textContent=e.target.value+'%';applySound()};$('#intensity').oninput=e=>{$('#intensityVal').textContent=e.target.value+'%';applySound()};
 $('#start').onclick=()=>{if(!audioOn)initAudio();if(!navigator.geolocation){$('#gps').textContent='GPS UNSUPPORTED';return}manual=false;$('#throttleWrap').classList.add('hidden');$('#inputState').textContent='GPS';$('#gps').textContent='GPS CONNECTING';if(watch)navigator.geolocation.clearWatch(watch);watch=navigator.geolocation.watchPosition(p=>{let now=Date.now(),mph=Math.max(0,(p.coords.speed||0)*2.23694),dt=Math.max(.25,(now-lastT)/1000),acc=(mph-lastSpeed)/dt;lastSpeed=mph;lastT=now;$('#gps').textContent='GPS ACTIVE';render(mph,acc)},()=>{$('#gps').textContent='GPS UNAVAILABLE';$('#inputState').textContent='MANUAL READY'},{enableHighAccuracy:true,maximumAge:300,timeout:10000})};render(0);
+
+// CC0 sampled engine layer
+const sampleUrls=[
+  'https://opengameart.org/sites/default/files/loop_0.wav',
+  'https://opengameart.org/sites/default/files/loop_1_0.wav',
+  'https://opengameart.org/sites/default/files/loop_2_0.wav',
+  'https://opengameart.org/sites/default/files/loop_3_0.wav',
+  'https://opengameart.org/sites/default/files/loop_4_0.wav',
+  'https://opengameart.org/sites/default/files/loop_5_0.wav'
+];
+const samplePlayers=sampleUrls.map((src,i)=>{const a=new Audio(src);a.loop=true;a.preload='auto';a.volume=0;return a});
+let samplesStarted=false;
+function startSamples(){if(samplesStarted)return;samplePlayers.forEach(a=>a.play().catch(()=>{}));samplesStarted=true}
+function updateSamples(){if(!audioOn||!samplesStarted)return;const x=Math.max(0,Math.min(5,(currentRPM-800)/1100));const lo=Math.floor(x),hi=Math.min(5,lo+1),mix=x-lo;const masterVol=(+$('#volume').value/100)*(+$('#intensity').value/100);samplePlayers.forEach((a,i)=>{let w=0;if(i===lo)w=1-mix;if(i===hi)w=Math.max(w,mix);a.volume=Math.min(.72,w*masterVol*.7);a.playbackRate=profiles[selected].n==='JDM'?1.08:profiles[selected].n==='STARSHIP'?1.16:1});}
+const oldApply=applySound;applySound=function(){oldApply();updateSamples()};
+const oldInit=initAudio;initAudio=function(){oldInit();startSamples();updateSamples()};
